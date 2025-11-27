@@ -12,7 +12,7 @@ chrome.runtime.onInstalled.addListener(() => {
       title: "Translate Page...",
       contexts: ["page", "link", "image"]
     });
-    console.log("菜單創建完成 (如果沒有錯誤)！");
+    console.log("Context menus created successfully (v2)!"); 
   });
 });
 
