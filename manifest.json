@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Gemini Web Translator",
+  "version": "1.0",
+  "description": "Send selected text to Gemini for translation",
+  "permissions": [
+    "contextMenus",
+    "scripting",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://gemini.google.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://gemini.google.com/*"],
+      "js": ["content_gemini.js"]
+    }
+  ]
+}
