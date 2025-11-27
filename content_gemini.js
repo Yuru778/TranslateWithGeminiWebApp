@@ -53,7 +53,9 @@ async function clickNewChat() {
     const tryClick = (selectors) => {
         for (const selector of selectors) {
             const btn = document.querySelector(selector);
-            if (btn && btn.offsetParent !== null) { // Check if visible
+            // Check if visible (offsetParent is a simple check, but not perfect for fixed/absolute)
+            // For Gemini's side menu, offsetParent is usually null if hidden.
+            if (btn && btn.offsetParent !== null) { 
                 console.log(`Found visible button with selector: ${selector}`);
                 btn.click();
                 return true;
@@ -62,8 +64,31 @@ async function clickNewChat() {
         return false;
     };
 
-    // 1. Try Temporary Chat immediately
-    if (tryClick(tempChatSelectors)) return true;
+    // Helper to find button by text content
+    const tryClickByText = (texts) => {
+        const allButtons = Array.from(document.querySelectorAll('button, div[role="button"], span'));
+        const btn = allButtons.find(b => {
+             if (!b.offsetParent) return false;
+             const text = b.textContent?.trim();
+             return texts.includes(text);
+        });
+        
+        if (btn) {
+            console.log(`Found button by text: ${btn.textContent}`);
+            btn.click();
+            return true;
+        }
+        return false;
+    };
+
+    // --- Strategy ---
+    
+    // 1. Try Temporary Chat immediately (multiple attempts in case of loading)
+    for (let i = 0; i < 3; i++) {
+        if (tryClick(tempChatSelectors)) return true;
+        if (tryClickByText(["臨時對話", "Temporary chat"])) return true;
+        await new Promise(r => setTimeout(r, 500)); // Short wait
+    }
 
     // 2. If not found, try opening the side menu to find Temporary Chat
     console.log("Temporary Chat button not found or not visible. Trying to expand side menu...");
@@ -71,14 +96,15 @@ async function clickNewChat() {
         '[data-test-id="side-nav-menu-button"]',
         'button[aria-label="主選單"]',
         'button[aria-label="Main menu"]',
-        'button[aria-label="Expand menu"]'
+        'button[aria-label="Expand menu"]',
+        'button[mattooltip="主選單"]',
+        'button[mattooltip="Main menu"]'
     ];
 
     let menuClicked = false;
     for (const selector of menuButtonSelectors) {
         const menuBtn = document.querySelector(selector);
         if (menuBtn) {
-            // Check visibility? Usually menu button is visible.
             console.log(`Found Side Menu button: ${selector}. Clicking...`);
             menuBtn.click();
             menuClicked = true;
@@ -91,40 +117,16 @@ async function clickNewChat() {
         console.log("Waiting for side menu to expand...");
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // 3. Try finding the Temporary Chat button again
+        // 3. Try finding the Temporary Chat button again after menu expand
         if (tryClick(tempChatSelectors)) return true;
+        if (tryClickByText(["臨時對話", "Temporary chat"])) return true;
     }
 
     // 4. If Temporary Chat is still not found, fallback to Standard New Chat
     console.log("Temporary Chat button not found. Falling back to Standard New Chat...");
     if (tryClick(standardChatSelectors)) return true;
+    if (tryClickByText(["New chat", "新增對話"])) return true;
 
-    // 5. Fallback: Try to find by text content if aria-label fails
-    const allButtons = Array.from(document.querySelectorAll('button, div[role="button"], span'));
-    
-    // Prioritize Temporary Chat text
-    const tempTextBtn = allButtons.find(b => {
-        const text = b.textContent?.trim();
-        return (text === "臨時對話" || text === "Temporary chat") && b.offsetParent !== null;
-    });
-
-    if (tempTextBtn) {
-        console.log(`Found New Chat button by text content (Temporary): ${tempTextBtn.textContent}`);
-        tempTextBtn.click();
-        return true;
-    }
-    
-    // Fallback to standard text
-    const standardTextBtn = allButtons.find(b => {
-        const text = b.textContent?.trim();
-        return (text === "New chat" || text === "新增對話") && b.offsetParent !== null;
-    });
-
-    if (standardTextBtn) {
-        console.log(`Found New Chat button by text content (Standard): ${standardTextBtn.textContent}`);
-        standardTextBtn.click();
-        return true;
-    }
 
     console.log("Could not find 'New Chat' button with any known selector.");
     return false;
