@@ -130,6 +130,72 @@ async function clickNewChat() {
     return false;
 }
 
+async function ensureFlashModel() {
+    console.log("Attempting to ensure 'Flash' (快捷型) model...");
+    
+    // 1. Find the model switcher button.
+    // It is usually a button with text like "Gemini Advanced", "Gemini", "Thinking", etc.
+    // We look for a button that has a popup menu and contains relevant text.
+    const buttons = Array.from(document.querySelectorAll('button, div[role="button"]'));
+    const modelSwitcher = buttons.find(b => {
+        // Must be visible
+        if (!b.offsetParent) return false;
+        
+        const text = b.textContent?.trim() || "";
+        const isModelText = text.includes("Gemini") || text.includes("Advanced") || text.includes("Thinking") || text.includes("思考");
+        
+        // It usually has aria-expanded or aria-haspopup
+        const isMenuTrigger = b.getAttribute('aria-expanded') !== null || b.getAttribute('aria-haspopup') !== null;
+
+        return isModelText && isMenuTrigger;
+    });
+
+    if (!modelSwitcher) {
+        console.log("Could not find model switcher button. Skipping model check.");
+        return;
+    }
+
+    // Check if we are already in Flash mode (heuristic)
+    // If the switcher text contains "Flash" and NOT "Thinking", we might be good.
+    // But "Gemini 1.5 Flash" vs "Gemini 2.0 Flash Thinking".
+    if (modelSwitcher.textContent.includes("Flash") && !modelSwitcher.textContent.includes("Thinking") && !modelSwitcher.textContent.includes("思考")) {
+        console.log("Already in Flash model (based on button text).");
+        return;
+    }
+
+    console.log(`Found potential model switcher: "${modelSwitcher.textContent}". Clicking to open menu...`);
+    modelSwitcher.click();
+
+    // Wait for menu to open
+    await new Promise(r => setTimeout(r, 1000));
+
+    // 2. Find "Flash" or "快捷型" option in the menu
+    // We search all clickable elements that might be menu items.
+    const candidates = Array.from(document.querySelectorAll('[role="menuitem"], [role="option"], li, button, span'));
+    
+    const flashOption = candidates.find(item => {
+        if (!item.offsetParent) return false; // Must be visible
+        const text = item.textContent?.trim() || "";
+        
+        // We want "Flash" or "快捷" but NOT "Thinking" (思考)
+        const isFlash = text.includes("Flash") || text.includes("快捷");
+        const isThinking = text.includes("Thinking") || text.includes("思考");
+        
+        return isFlash && !isThinking; 
+    });
+
+    if (flashOption) {
+        console.log(`Found Flash option: "${flashOption.textContent}". Clicking...`);
+        flashOption.click();
+        // Wait for the switch to happen
+        await new Promise(r => setTimeout(r, 1000));
+    } else {
+        console.log("Flash option not found in menu. Closing menu...");
+        // Try to close by clicking the switcher again
+        modelSwitcher.click();
+    }
+}
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "pasteAndSend") {
         const text = request.text;
@@ -153,6 +219,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             } else {
                 console.log("Did not click New Chat (not found or already on fresh page).");
             }
+
+            // Ensure we are using the Flash model
+            await ensureFlashModel();
 
             try {
                 // Wait for the input area to be ready
