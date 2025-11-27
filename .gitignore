@@ -13,3 +13,6 @@ temp_expand_search.txt
 # Editor directories
 .vscode/
 .idea/
+
+# Reference files
+/ref
