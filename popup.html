@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gemini Translator Settings</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <h3>摘要長度設定</h3>
+    
+    <div class="card slider-container">
+      <div class="labels">
+        <span>精簡</span>
+        <span>完整摘要</span>
+      </div>
+      <input type="range" id="lengthSlider" min="0" max="100" value="50">
+      <div class="current-value">目前設定: <span id="currentLengthDisplay">--</span> 字</div>
+    </div>
+
+    <div class="card">
+      <div class="settings-group">
+        <label for="minLength">最少字數:</label>
+        <div class="number-input-wrapper">
+          <input type="number" id="minLength" min="1" max="1000" value="200">
+          <div class="spinner-btns">
+            <button class="spin-btn up" data-target="minLength">▲</button>
+            <button class="spin-btn down" data-target="minLength">▼</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <label for="maxLength">最多字數:</label>
+        <div class="number-input-wrapper">
+          <input type="number" id="maxLength" min="1" max="5000" value="600">
+          <div class="spinner-btns">
+            <button class="spin-btn up" data-target="maxLength">▲</button>
+            <button class="spin-btn down" data-target="maxLength">▼</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="footer">Gemini Web Translator</div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

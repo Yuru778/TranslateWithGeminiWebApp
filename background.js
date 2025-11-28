@@ -5,6 +5,12 @@ chrome.runtime.onInstalled.addListener(() => {
       title: "Send to Gemini Translate...",
       contexts: ["selection"]
     });
+
+    chrome.contextMenus.create({
+      id: "summarize-with-gemini",
+      title: "Summarize with Gemini...",
+      contexts: ["selection", "page"]
+    });
     
     
     chrome.contextMenus.create({
@@ -20,7 +26,25 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   console.log("右鍵選單被點擊了！");
   if (info.menuItemId === "send-to-gemini") {
     const selectedText = info.selectionText;
-    openGeminiAndSend(selectedText);
+    openGeminiAndSend(selectedText, 'translate');
+  } else if (info.menuItemId === "summarize-with-gemini") {
+    if (info.selectionText) {
+        const selectedText = info.selectionText;
+        openGeminiAndSend(selectedText, 'summarize');
+    } else {
+        // No selection, assume page summary
+        chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            func: () => document.body.innerText
+        }, (results) => {
+            if (results && results[0] && results[0].result) {
+                const pageText = results[0].result;
+                openGeminiAndSend(pageText, 'summarize');
+            } else {
+                console.error("Failed to retrieve page text for summary.");
+            }
+        });
+    }
   } else if (info.menuItemId === "translate-page") {
     // Execute script to get all text from the page
     chrome.scripting.executeScript({
@@ -29,7 +53,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     }, (results) => {
       if (results && results[0] && results[0].result) {
         const pageText = results[0].result;
-        openGeminiAndSend(pageText);
+        openGeminiAndSend(pageText, 'translate');
       } else {
         console.error("Failed to retrieve page text.");
       }
@@ -37,7 +61,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
 });
 
-function openGeminiAndSend(text) {
+function openGeminiAndSend(text, actionType = 'translate') {
     // Open Gemini in a new tab
     chrome.tabs.create({ url: "https://gemini.google.com/app" }, (newTab) => {
       // Wait for the tab to load before sending the message
@@ -45,10 +69,17 @@ function openGeminiAndSend(text) {
         if (tabId === newTab.id && changeInfo.status === 'complete') {
           chrome.tabs.onUpdated.removeListener(listener);
           
-          // Send the text to the content script
-          chrome.tabs.sendMessage(tabId, {
-            action: "pasteAndSend",
-            text: text
+          // Fetch settings from storage
+          chrome.storage.local.get(['summarySettings'], (result) => {
+             const settings = result.summarySettings;
+             
+             // Send the text to the content script
+             chrome.tabs.sendMessage(tabId, {
+               action: "pasteAndSend",
+               text: text,
+               actionType: actionType,
+               settings: settings
+             });
           });
         }
       });

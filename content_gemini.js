@@ -236,7 +236,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 document.execCommand('delete', false, null);
 
                 // Construct the prompt
-                const prompt = `Please translate the following text to Traditional Chinese:\n\n${text}`;
+                let prompt = "";
+                const actionType = request.actionType || 'translate'; // Default to translate
+
+                if (actionType === 'summarize') {
+                    const settings = request.settings || { sliderValue: 50, minLength: 20, maxLength: 250 };
+                    const min = settings.minLength;
+                    const max = settings.maxLength;
+                    const percentage = settings.sliderValue;
+                    const targetLength = Math.round(min + (max - min) * (percentage / 100));
+
+                    prompt = `Please summarize the following text in Traditional Chinese (approx. ${targetLength} characters):\n\n${text}`;
+                } else {
+                    prompt = `Please translate the following text to Traditional Chinese:\n\n${text}`;
+                }
                 console.log("Prompt constructed:", prompt);
 
                 // Alternative insertion method: Direct DOM manipulation + Event
